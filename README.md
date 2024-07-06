@@ -1,6 +1,4 @@
-# Radio-T
-
-Radio-T extension
+# Расширение для raycast
 
 # Development
 
