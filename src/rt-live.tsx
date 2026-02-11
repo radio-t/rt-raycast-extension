@@ -1,36 +1,52 @@
-import { showHUD } from "@raycast/api";
-import fetch from "node-fetch";
-import { streamLive } from "./utils";
-
-const NEWS_BASE_URL = "https://news.radio-t.com/api/v1";
-
-interface ShowStart {
-  started: string;
-}
-
+import { showHUD, showToast, Toast } from "@raycast/api";
+import { streamLive, play } from "./utils";
 
 export default async function Command() {
   try {
-    const response = await fetch(`${NEWS_BASE_URL}/show/start`);
-    const data: ShowStart = await response.json();
-
     const now = new Date();
-    const startDate = new Date(data.started);
-    const isLive = now >= startDate && now < new Date(startDate.getTime() + 3 * 60 * 60 * 1000); // Assume show lasts 3 hours
+    const currentDay = now.getUTCDay();
+    const currentHour = now.getUTCHours();
+    const currentMinute = now.getUTCMinutes();
 
-    if (!isLive) {
-      await showHUD("Live: Saturday at 22:00 UTC");
+    // Calculate the start and end time of the show
+    const isSaturday = currentDay === 6;
+    const showStartHour = 20;
+    const showDurationHours = 3;
+
+    // Check if the show is currently live
+    const isShowTime = isSaturday &&
+      ((currentHour === showStartHour && currentMinute >= 0) ||
+       (currentHour > showStartHour && currentHour < showStartHour + showDurationHours));
+
+    if (!isShowTime) {
+      // Calculate time until next show
+      const daysUntilSaturday = (6 - currentDay + 7) % 7;
+      const nextShowDate = new Date(now);
+      nextShowDate.setUTCDate(nextShowDate.getUTCDate() + daysUntilSaturday);
+      nextShowDate.setUTCHours(showStartHour, 0, 0, 0);
+
+      await showHUD(`Next show: ${nextShowDate.toUTCString()}`);
       return;
     }
 
+    // Show is live, let's stream it
+    await showToast({ title: "Starting Radio-T live stream...", style: Toast.Style.Animated });
+
     const streamId = await streamLive();
     if (streamId) {
+      // Explicitly call play() to ensure the stream starts
+      await play();
+
       await showHUD("Now streaming Radio-T live");
     } else {
       await showHUD("Failed to start live stream");
     }
   } catch (error) {
     console.error("Error in command:", error);
-    await showHUD("Error: Failed to check show status or start live stream");
+    if (error instanceof Error) {
+      await showHUD(`Error: ${error.message}`);
+    } else {
+      await showHUD("An unknown error occurred");
+    }
   }
 }
