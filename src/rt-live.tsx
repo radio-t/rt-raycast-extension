@@ -8,8 +8,6 @@ export default async function Command() {
     const currentHour = now.getUTCHours();
     const currentMinute = now.getUTCMinutes();
 
-    console.log(currentDay, currentHour);
-
     // Calculate the start and end time of the show
     const isSaturday = currentDay === 6;
     const showStartHour = 20;
@@ -36,14 +34,11 @@ export default async function Command() {
 
     const streamId = await streamLive();
     if (streamId) {
-      console.log("Stream started with ID:", streamId);
-
       // Explicitly call play() to ensure the stream starts
       await play();
 
       await showHUD("Now streaming Radio-T live");
     } else {
-      console.error("Failed to get stream ID");
       await showHUD("Failed to start live stream");
     }
   } catch (error) {
